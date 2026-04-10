@@ -31,7 +31,7 @@ export default function Footer() {
         <p className="text-sm text-zinc-400">
           Built by{" "}
           <a
-            href="https://www.linkedin.com/in/michaelwessman/"
+            href="https://www.linkedin.com/in/mikeywessman/"
             target="_blank"
             rel="noopener noreferrer"
             className="text-zinc-600 font-medium hover:text-zinc-900 transition-colors"
@@ -41,7 +41,7 @@ export default function Footer() {
         </p>
         <div className="flex items-center gap-4">
           <a
-            href="https://www.linkedin.com/in/michaelwessman/"
+            href="https://www.linkedin.com/in/mikeywessman/"
             target="_blank"
             rel="noopener noreferrer"
             className="text-zinc-400 hover:text-zinc-900 transition-colors"
@@ -50,7 +50,7 @@ export default function Footer() {
             <LinkedInIcon />
           </a>
           <a
-            href="https://x.com/MikeyWessman"
+            href="https://x.com/Mik_wess"
             target="_blank"
             rel="noopener noreferrer"
             className="text-zinc-400 hover:text-zinc-900 transition-colors"

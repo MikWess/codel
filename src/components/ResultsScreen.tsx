@@ -55,7 +55,7 @@ export default function ResultsScreen({ results, totalTime }: ResultsScreenProps
     `\u23f1\ufe0f ${minutes}:${String(seconds).padStart(2, "0")} total`,
     "",
     "Play at codel-theta.vercel.app",
-    "Built by @MikeyWessman",
+    "Built by @Mik_wess",
   ].join("\n");
 
   const handleShare = async () => {
