@@ -9,6 +9,7 @@ import CodeEditor from "./CodeEditor";
 import Timer from "./Timer";
 import OutputPanel from "./OutputPanel";
 import ResultsScreen from "./ResultsScreen";
+import LobbyScreen from "./LobbyScreen";
 
 interface GameProps {
   puzzles: Puzzle[];
@@ -22,14 +23,15 @@ const difficultyLabel: Record<Difficulty, string> = {
 
 export default function Game({ puzzles }: GameProps) {
   const { user } = useAuth();
+  const [started, setStarted] = useState(false);
   const [currentStage, setCurrentStage] = useState(0);
   const [code, setCode] = useState(puzzles[0]?.buggyCode ?? "");
   const [output, setOutput] = useState<string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [running, setRunning] = useState(false);
   const [showHint, setShowHint] = useState(false);
-  const [startTime] = useState(Date.now());
-  const [stageStartTime, setStageStartTime] = useState(Date.now());
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [stageStartTime, setStageStartTime] = useState<number | null>(null);
   const [results, setResults] = useState<PuzzleResult[]>([]);
   const [finished, setFinished] = useState(false);
   const [totalTime, setTotalTime] = useState(0);
@@ -48,15 +50,21 @@ export default function Game({ puzzles }: GameProps) {
         setChecking(false);
       })
       .catch(() => {
-        // Firestore permissions not set up yet — let them play
         setChecking(false);
       });
   }, [user]);
 
   const puzzle = puzzles[currentStage];
 
+  const handleStart = useCallback(() => {
+    const now = Date.now();
+    setStartTime(now);
+    setStageStartTime(now);
+    setStarted(true);
+  }, []);
+
   const handleRun = useCallback(async () => {
-    if (!puzzle || running) return;
+    if (!puzzle || running || !stageStartTime) return;
     setRunning(true);
     setOutput(null);
     setIsCorrect(null);
@@ -92,10 +100,9 @@ export default function Game({ puzzles }: GameProps) {
           setStageStartTime(Date.now());
         }, 1500);
       } else {
-        const total = Math.floor((Date.now() - startTime) / 1000);
+        const total = Math.floor((Date.now() - startTime!) / 1000);
         setTotalTime(total);
 
-        // Save to Firestore (if signed in)
         if (user) {
           const today = new Date().toISOString().split("T")[0];
           saveGameResult(
@@ -116,9 +123,7 @@ export default function Game({ puzzles }: GameProps) {
   }, [puzzle, running, code, stageStartTime, results, currentStage, puzzles, startTime, user]);
 
   if (checking) {
-    return (
-      <div className="text-center py-16 text-zinc-400">Loading...</div>
-    );
+    return <div className="text-center py-16 text-zinc-400">Loading...</div>;
   }
 
   if (alreadyPlayed) {
@@ -128,6 +133,10 @@ export default function Game({ puzzles }: GameProps) {
         <p className="text-zinc-500">Come back tomorrow for new puzzles.</p>
       </div>
     );
+  }
+
+  if (!started) {
+    return <LobbyScreen onStart={handleStart} />;
   }
 
   if (!puzzle) return null;
