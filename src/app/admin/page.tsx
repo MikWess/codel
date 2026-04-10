@@ -26,6 +26,9 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState<{ role: string; text: string }[]>([]);
+  const [chatLoading, setChatLoading] = useState(false);
 
   const now = new Date();
   const [viewYear, setViewYear] = useState(now.getFullYear());
@@ -85,6 +88,43 @@ export default function AdminPage() {
   async function handleApprove(date: string) {
     await approvePuzzleSet(date);
     await loadPuzzles();
+  }
+
+  async function handleChat() {
+    if (!chatInput.trim() || !selectedDate) return;
+    const userMsg = chatInput.trim();
+    setChatInput("");
+    setChatMessages((prev) => [...prev, { role: "user", text: userMsg }]);
+    setChatLoading(true);
+
+    try {
+      const currentPuzzles = puzzleMap[selectedDate]?.puzzles ?? null;
+      const res = await fetch("/api/admin-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: userMsg, date: selectedDate, currentPuzzles }),
+      });
+      const data = await res.json();
+
+      if (data.action === "saved") {
+        setChatMessages((prev) => [
+          ...prev,
+          { role: "assistant", text: "Done! Puzzles saved as draft. Review them above." },
+        ]);
+        await loadPuzzles();
+      } else {
+        setChatMessages((prev) => [
+          ...prev,
+          { role: "assistant", text: data.message || "Puzzles updated." },
+        ]);
+      }
+    } catch {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", text: "Something went wrong." },
+      ]);
+    }
+    setChatLoading(false);
   }
 
   function prevMonth() {
@@ -215,77 +255,130 @@ export default function AdminPage() {
         </div>
 
         {/* Detail panel */}
-        <div className="w-96 shrink-0">
+        <div className="w-96 shrink-0 flex flex-col gap-4">
           {!selectedDate ? (
             <div className="border border-zinc-200 border-dashed rounded-lg p-8 text-center text-zinc-400">
               <p>Select a date to view or generate puzzles</p>
             </div>
           ) : loading ? (
             <p className="text-zinc-400">Loading...</p>
-          ) : selectedSet ? (
-            <div className="border border-zinc-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-semibold text-lg">{selectedDate}</h3>
-                  <span
-                    className={`text-xs font-medium px-2 py-0.5 rounded ${
-                      selectedSet.status === "approved"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-amber-100 text-amber-700"
-                    }`}
-                  >
-                    {selectedSet.status}
-                  </span>
-                </div>
-                {selectedSet.status === "draft" && (
-                  <button
-                    onClick={() => handleApprove(selectedDate)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500 transition-colors text-sm font-semibold"
-                  >
-                    Approve
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-col gap-3">
-                {selectedSet.puzzles.map((p) => (
-                  <div key={p.id}>
-                    <div className="flex items-center gap-2 mb-1">
+          ) : (
+            <>
+              {selectedSet ? (
+                <div className="border border-zinc-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold text-lg">{selectedDate}</h3>
                       <span
-                        className={`text-xs font-bold uppercase ${
-                          p.difficulty === "easy"
-                            ? "text-green-600"
-                            : p.difficulty === "medium"
-                              ? "text-amber-600"
-                              : "text-red-600"
+                        className={`text-xs font-medium px-2 py-0.5 rounded ${
+                          selectedSet.status === "approved"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-amber-100 text-amber-700"
                         }`}
                       >
-                        {p.difficulty}
+                        {selectedSet.status}
                       </span>
-                      <span className="font-medium text-sm">{p.title}</span>
                     </div>
-                    <p className="text-xs text-zinc-500 mb-1">{p.description}</p>
-                    <pre className="text-xs bg-zinc-50 border border-zinc-200 rounded p-2 overflow-x-auto max-h-40">
-                      {p.buggyCode}
-                    </pre>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-zinc-400">
-                      <span>Expected: <code className="bg-zinc-100 px-1 rounded">{p.expectedOutput}</code></span>
-                    </div>
+                    {selectedSet.status === "draft" && (
+                      <button
+                        onClick={() => handleApprove(selectedDate)}
+                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500 transition-colors text-sm font-semibold"
+                      >
+                        Approve
+                      </button>
+                    )}
                   </div>
-                ))}
+                  <div className="flex flex-col gap-3">
+                    {selectedSet.puzzles.map((p) => (
+                      <div key={p.id}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span
+                            className={`text-xs font-bold uppercase ${
+                              p.difficulty === "easy"
+                                ? "text-green-600"
+                                : p.difficulty === "medium"
+                                  ? "text-amber-600"
+                                  : "text-red-600"
+                            }`}
+                          >
+                            {p.difficulty}
+                          </span>
+                          <span className="font-medium text-sm">{p.title}</span>
+                        </div>
+                        <p className="text-xs text-zinc-500 mb-1">{p.description}</p>
+                        <pre className="text-xs bg-zinc-50 border border-zinc-200 rounded p-2 overflow-x-auto max-h-40">
+                          {p.buggyCode}
+                        </pre>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-zinc-400">
+                          <span>Expected: <code className="bg-zinc-100 px-1 rounded">{p.expectedOutput}</code></span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="border border-zinc-200 rounded-lg p-6 text-center">
+                  <h3 className="font-semibold text-lg mb-2">{selectedDate}</h3>
+                  <p className="text-zinc-400 text-sm mb-4">No puzzles for this date yet.</p>
+                  <button
+                    onClick={() => handleGenerate(selectedDate)}
+                    disabled={generating}
+                    className="px-5 py-2.5 bg-zinc-900 text-white rounded-md hover:bg-zinc-700 disabled:bg-zinc-300 transition-colors text-sm font-semibold"
+                  >
+                    {generating ? "Generating..." : "Generate with Claude"}
+                  </button>
+                </div>
+              )}
+
+              {/* Chat with Haiku */}
+              <div className="border border-zinc-200 rounded-lg p-4">
+                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-violet-400" />
+                  Puzzle Assistant
+                  <span className="text-xs font-normal text-zinc-400">(Haiku)</span>
+                </h4>
+
+                {chatMessages.length > 0 && (
+                  <div className="flex flex-col gap-2 mb-3 max-h-48 overflow-y-auto">
+                    {chatMessages.map((msg, i) => (
+                      <div
+                        key={i}
+                        className={`text-xs px-3 py-2 rounded-lg ${
+                          msg.role === "user"
+                            ? "bg-zinc-100 text-zinc-700 self-end ml-8"
+                            : "bg-violet-50 text-violet-800 self-start mr-8"
+                        }`}
+                      >
+                        {msg.text}
+                      </div>
+                    ))}
+                    {chatLoading && (
+                      <div className="text-xs text-violet-400 px-3 py-2">Thinking...</div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <input
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleChat()}
+                    placeholder="e.g. &quot;make the easy one about strings&quot;"
+                    className="flex-1 border border-zinc-300 rounded-md px-3 py-2 text-sm focus:border-violet-400 focus:outline-none"
+                  />
+                  <button
+                    onClick={handleChat}
+                    disabled={chatLoading || !chatInput.trim()}
+                    className="px-3 py-2 bg-violet-600 text-white rounded-md hover:bg-violet-500 disabled:bg-zinc-300 transition-colors text-sm"
+                  >
+                    Send
+                  </button>
+                </div>
+                <p className="text-xs text-zinc-300 mt-2">
+                  Ask to generate, tweak, or replace puzzles for {selectedDate}
+                </p>
               </div>
-            </div>
-          ) : (
-            <div className="border border-zinc-200 rounded-lg p-6 text-center">
-              <h3 className="font-semibold text-lg mb-2">{selectedDate}</h3>
-              <p className="text-zinc-400 text-sm mb-4">No puzzles for this date yet.</p>
-              <button
-                onClick={() => handleGenerate(selectedDate)}
-                disabled={generating}
-                className="px-5 py-2.5 bg-zinc-900 text-white rounded-md hover:bg-zinc-700 disabled:bg-zinc-300 transition-colors text-sm font-semibold"
-              >
-                {generating ? "Generating..." : "Generate with Claude"}
-              </button>
-            </div>
+            </>
           )}
         </div>
       </div>
