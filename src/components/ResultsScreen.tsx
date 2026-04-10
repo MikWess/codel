@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PuzzleResult } from "@/lib/types";
 import { useAuth } from "./AuthProvider";
+import { getTodaysLeaderboard } from "@/lib/db";
 
 interface ResultsScreenProps {
   results: PuzzleResult[];
@@ -29,9 +30,88 @@ function FireIcon() {
   );
 }
 
+// Punchlines by percentile bucket — the lower the percentile, the better they did
+const PUNCHLINES: Record<string, string[]> = {
+  top5: [
+    "NASA called. They want you on the Mars debug team.",
+    "You type faster than most people think.",
+    "Somewhere, a 10x engineer just felt a disturbance in the force.",
+    "Your IDE is blushing right now.",
+    "Stack Overflow mods are filing a missing person report for you.",
+    "You don't have bugs. Bugs have you.",
+    "Legend says your code compiles on the first try too.",
+    "The rubber duck just asked YOU for advice.",
+  ],
+  top10: [
+    "Your pull requests get approved before you open them.",
+    "Linus Torvalds just followed you on GitHub.",
+    "You probably mass-reject PRs as a hobby.",
+    "Senior engineers are sweating somewhere right now.",
+    "The compiler respects you.",
+    "Even your merge conflicts resolve themselves.",
+    "You didn't find the bugs. The bugs found each other out of fear.",
+  ],
+  top25: [
+    "Your tech lead just got a little nervous.",
+    "That's promotion-worthy debugging speed.",
+    "You could review Mark Zuckerberg's code. He'd learn something.",
+    "The bugs never stood a chance.",
+    "You debug like you've seen the Matrix source code.",
+    "Recruiters are already sliding into your DMs.",
+    "This is what happens when you actually read the error message.",
+  ],
+  top50: [
+    "Solid. You're the person the team actually calls when prod breaks.",
+    "Not bad — you'd survive a live coding interview. Probably.",
+    "You squash bugs like a QA engineer with a vendetta.",
+    "That's faster than at least half the people who put 'React' on their resume.",
+    "Sam Altman would've asked ChatGPT. You did it yourself. Respect.",
+    "You're the reason the 'it works on my machine' mug exists — because it actually does.",
+    "Debugging at a respectable pace. Your standup would be proud.",
+  ],
+  top75: [
+    "Hey, you finished. That's more than most people can say about their side projects.",
+    "You took the scenic route through the codebase. Nothing wrong with that.",
+    "Slow and steady ships the feature... eventually.",
+    "Your code works. The vibe is immaculate. The speed... we'll workshop it.",
+    "Somewhere a bootcamp grad just beat your time. But you have character.",
+    "You debug like someone who reads the docs. The whole docs.",
+    "Console.log('am I done yet?') — yes. Yes you are.",
+  ],
+  bottom: [
+    "The bug found YOU.",
+    "Are you sure you didn't just stare at the screen for a while?",
+    "That's okay. Thomas Edison failed 1,000 times before inventing... wait, wrong field.",
+    "Your keyboard called. It wants more action.",
+    "You code like someone who asks ChatGPT to explain 'for' loops.",
+    "At this pace, the daily puzzle became a weekly puzzle.",
+    "The good news: you finished. The bad news: the leaderboard is public.",
+    "You debug like you're being paid by the hour. Respect the hustle.",
+    "Even a random monkey would've... actually no, you did fine. Barely.",
+    "Somewhere, a CS101 student is celebrating beating your time.",
+  ],
+};
+
+function getPunchline(percentile: number): string {
+  let bucket: string;
+  if (percentile <= 5) bucket = "top5";
+  else if (percentile <= 10) bucket = "top10";
+  else if (percentile <= 25) bucket = "top25";
+  else if (percentile <= 50) bucket = "top50";
+  else if (percentile <= 75) bucket = "top75";
+  else bucket = "bottom";
+
+  const lines = PUNCHLINES[bucket];
+  return lines[Math.floor(Math.random() * lines.length)];
+}
+
 export default function ResultsScreen({ results, totalTime }: ResultsScreenProps) {
   const { user, signIn } = useAuth();
   const [copied, setCopied] = useState(false);
+  const [percentile, setPercentile] = useState<number | null>(null);
+  const [beatCount, setBeatCount] = useState(0);
+  const [totalPlayers, setTotalPlayers] = useState(0);
+  const [punchline, setPunchline] = useState("");
 
   const minutes = Math.floor(totalTime / 60);
   const seconds = totalTime % 60;
@@ -40,6 +120,27 @@ export default function ResultsScreen({ results, totalTime }: ResultsScreenProps
   const puzzleNumber = Math.floor(
     (Date.now() - new Date("2026-04-10").getTime()) / (1000 * 60 * 60 * 24)
   ) + 1;
+
+  useEffect(() => {
+    getTodaysLeaderboard()
+      .then((entries) => {
+        if (entries.length === 0) {
+          setPercentile(1);
+          setBeatCount(0);
+          setTotalPlayers(1);
+          setPunchline(getPunchline(1));
+          return;
+        }
+        const beaten = entries.filter((e) => e.totalTime > totalTime).length;
+        const total = entries.length;
+        const pct = Math.round(((total - beaten) / total) * 100);
+        setPercentile(pct);
+        setBeatCount(beaten);
+        setTotalPlayers(total);
+        setPunchline(getPunchline(pct));
+      })
+      .catch(() => {});
+  }, [totalTime]);
 
   const shareText = [
     `Codel #${puzzleNumber}`,
@@ -53,10 +154,11 @@ export default function ResultsScreen({ results, totalTime }: ResultsScreenProps
     }),
     "",
     `\u23f1\ufe0f ${minutes}:${String(seconds).padStart(2, "0")} total`,
+    percentile !== null ? `Better than ${100 - percentile}% of players` : "",
     "",
     "Play at codel-theta.vercel.app",
     "Built by @Mik_wess",
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -64,7 +166,7 @@ export default function ResultsScreen({ results, totalTime }: ResultsScreenProps
         await navigator.share({ text: shareText });
         return;
       } catch {
-        // User cancelled or not supported — fall through to clipboard
+        // fall through
       }
     }
     await navigator.clipboard.writeText(shareText);
@@ -87,6 +189,24 @@ export default function ResultsScreen({ results, totalTime }: ResultsScreenProps
         {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
       </div>
 
+      {/* Percentile + punchline */}
+      {percentile !== null && (
+        <div className="w-full max-w-sm">
+          <div className="border border-zinc-200 rounded-lg p-5 bg-zinc-50">
+            <p className="text-sm text-zinc-500 mb-1">
+              You beat <span className="font-bold text-zinc-900">{beatCount}</span> of{" "}
+              <span className="font-bold text-zinc-900">{totalPlayers}</span> players today
+            </p>
+            <p className="text-2xl font-bold mb-3">
+              Better than {100 - percentile}% of players
+            </p>
+            <p className="text-sm text-zinc-500 italic">
+              &ldquo;{punchline}&rdquo;
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Per-puzzle results */}
       <div className="flex flex-col gap-3 w-full max-w-sm">
         {results.map((r) => {
@@ -102,7 +222,6 @@ export default function ResultsScreen({ results, totalTime }: ResultsScreenProps
                   : "bg-red-50 border-red-200 text-red-800"
               }`}
             >
-              {/* Time bar background */}
               <div
                 className={`absolute left-0 top-0 bottom-0 ${
                   r.solved ? "bg-green-100" : "bg-red-100"
@@ -152,22 +271,10 @@ export default function ResultsScreen({ results, totalTime }: ResultsScreenProps
               className="flex items-center gap-2 px-5 py-2.5 border border-zinc-300 rounded-lg hover:border-zinc-400 transition-colors text-sm font-medium text-zinc-700"
             >
               <svg width="16" height="16" viewBox="0 0 24 24">
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335"
-                />
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
               </svg>
               Sign in with Google
             </button>
