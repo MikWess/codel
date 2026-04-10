@@ -61,7 +61,7 @@ console.log(reverseString("hello"));`,
 }
 
 console.log(countVowels("javascript is awesome"));`,
-      expectedOutput: "7",
+      expectedOutput: "8",
       hint: "What happens after the first vowel is found?",
       timeTarget: 90,
     },
