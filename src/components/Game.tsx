@@ -103,17 +103,17 @@ export default function Game({ puzzles }: GameProps) {
         const total = Math.floor((Date.now() - startTime!) / 1000);
         setTotalTime(total);
 
-        if (user) {
-          const today = new Date().toISOString().split("T")[0];
-          saveGameResult(
-            user.uid,
-            user.displayName ?? "Anonymous",
-            user.photoURL ?? "",
-            today,
-            newResults,
-            total
-          ).catch(() => {});
-        }
+        // Save to Firestore — signed in or guest
+        const today = new Date().toISOString().split("T")[0];
+        const guestId = `guest_${Math.random().toString(36).slice(2, 10)}`;
+        saveGameResult(
+          user?.uid ?? guestId,
+          user?.displayName ?? "Guest",
+          user?.photoURL ?? "",
+          today,
+          newResults,
+          total
+        ).catch(() => {});
 
         setTimeout(() => {
           setFinished(true);
