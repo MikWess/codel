@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Puzzle, PuzzleResult, Difficulty } from "@/lib/types";
 import { runCode } from "@/lib/runner";
+import { saveGameResult, hasPlayedToday } from "@/lib/db";
+import { useAuth } from "./AuthProvider";
 import CodeEditor from "./CodeEditor";
 import Timer from "./Timer";
 import OutputPanel from "./OutputPanel";
@@ -19,6 +21,7 @@ const difficultyLabel: Record<Difficulty, string> = {
 };
 
 export default function Game({ puzzles }: GameProps) {
+  const { user } = useAuth();
   const [currentStage, setCurrentStage] = useState(0);
   const [code, setCode] = useState(puzzles[0]?.buggyCode ?? "");
   const [output, setOutput] = useState<string | null>(null);
@@ -30,6 +33,19 @@ export default function Game({ puzzles }: GameProps) {
   const [results, setResults] = useState<PuzzleResult[]>([]);
   const [finished, setFinished] = useState(false);
   const [totalTime, setTotalTime] = useState(0);
+  const [alreadyPlayed, setAlreadyPlayed] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    if (!user) {
+      setChecking(false);
+      return;
+    }
+    hasPlayedToday(user.uid).then((played) => {
+      setAlreadyPlayed(played);
+      setChecking(false);
+    });
+  }, [user]);
 
   const puzzle = puzzles[currentStage];
 
@@ -72,12 +88,41 @@ export default function Game({ puzzles }: GameProps) {
       } else {
         const total = Math.floor((Date.now() - startTime) / 1000);
         setTotalTime(total);
+
+        // Save to Firestore
+        if (user) {
+          const today = new Date().toISOString().split("T")[0];
+          saveGameResult(
+            user.uid,
+            user.displayName ?? "Anonymous",
+            user.photoURL ?? "",
+            today,
+            newResults,
+            total
+          );
+        }
+
         setTimeout(() => {
           setFinished(true);
         }, 1500);
       }
     }
-  }, [puzzle, running, code, stageStartTime, results, currentStage, puzzles, startTime]);
+  }, [puzzle, running, code, stageStartTime, results, currentStage, puzzles, startTime, user]);
+
+  if (checking) {
+    return (
+      <div className="text-center py-16 text-zinc-400">Loading...</div>
+    );
+  }
+
+  if (alreadyPlayed) {
+    return (
+      <div className="text-center py-16">
+        <h2 className="text-2xl font-bold mb-2">Already played today!</h2>
+        <p className="text-zinc-500">Come back tomorrow for new puzzles.</p>
+      </div>
+    );
+  }
 
   if (!puzzle) return null;
 
@@ -123,13 +168,13 @@ export default function Game({ puzzles }: GameProps) {
       </div>
 
       {/* Editor */}
-      <CodeEditor code={code} onChange={setCode} disabled={running || (isCorrect === true)} />
+      <CodeEditor code={code} onChange={setCode} disabled={running || isCorrect === true} />
 
       {/* Actions */}
       <div className="flex gap-3">
         <button
           onClick={handleRun}
-          disabled={running || (isCorrect === true)}
+          disabled={running || isCorrect === true}
           className="px-5 py-2.5 bg-zinc-900 hover:bg-zinc-700 disabled:bg-zinc-300 disabled:text-zinc-500 text-white font-semibold rounded-md transition-colors"
         >
           {running ? "Running..." : "Run Code"}
@@ -140,7 +185,7 @@ export default function Game({ puzzles }: GameProps) {
             setOutput(null);
             setIsCorrect(null);
           }}
-          disabled={running || (isCorrect === true)}
+          disabled={running || isCorrect === true}
           className="px-5 py-2.5 border border-zinc-300 hover:border-zinc-400 text-zinc-600 rounded-md transition-colors disabled:opacity-50"
         >
           Reset
@@ -161,11 +206,7 @@ export default function Game({ puzzles }: GameProps) {
       )}
 
       {/* Output */}
-      <OutputPanel
-        output={output}
-        expected={puzzle.expectedOutput}
-        isCorrect={isCorrect}
-      />
+      <OutputPanel output={output} expected={puzzle.expectedOutput} isCorrect={isCorrect} />
     </div>
   );
 }
