@@ -9,6 +9,8 @@ interface LobbyScreenProps {
 
 export default function LobbyScreen({ onStart }: LobbyScreenProps) {
   const [avgTime, setAvgTime] = useState<number | null>(null);
+  const [medianTime, setMedianTime] = useState<number | null>(null);
+  const [percentiles, setPercentiles] = useState<{ time: number; pct: number }[]>([]);
   const [playerCount, setPlayerCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [hovering, setHovering] = useState(false);
@@ -28,8 +30,22 @@ export default function LobbyScreen({ onStart }: LobbyScreenProps) {
       .then((entries) => {
         setPlayerCount(entries.length);
         if (entries.length > 0) {
-          const total = entries.reduce((sum, e) => sum + e.totalTime, 0);
-          setAvgTime(Math.round(total / entries.length));
+          const times = entries.map((e) => e.totalTime).sort((a, b) => a - b);
+          const total = times.reduce((sum, t) => sum + t, 0);
+          setAvgTime(Math.round(total / times.length));
+          setMedianTime(times[Math.floor(times.length / 2)]);
+
+          // Calculate beat-percentile targets
+          const targets = [
+            { pct: 90, idx: Math.floor(times.length * 0.1) },
+            { pct: 75, idx: Math.floor(times.length * 0.25) },
+            { pct: 50, idx: Math.floor(times.length * 0.5) },
+          ];
+          setPercentiles(
+            targets
+              .filter((t) => t.idx < times.length)
+              .map((t) => ({ time: times[t.idx], pct: t.pct }))
+          );
         }
         setLoading(false);
       })
@@ -92,21 +108,39 @@ export default function LobbyScreen({ onStart }: LobbyScreenProps) {
         </div>
       </div>
 
-      {/* Stats */}
-      {!loading && playerCount > 0 && (
-        <div className="flex gap-8">
-          <div>
-            <p className="text-4xl font-bold">{playerCount}</p>
-            <p className="text-xs text-zinc-400 uppercase tracking-wider mt-1">
-              {playerCount === 1 ? "Player" : "Players"}
+      {/* Challenge targets */}
+      {!loading && playerCount > 0 && medianTime !== null && (
+        <div className="w-full max-w-md">
+          <div className="border border-zinc-200 rounded-lg p-5 bg-zinc-50">
+            <p className="text-xs text-zinc-400 uppercase tracking-widest font-bold mb-3">
+              {playerCount} players today
             </p>
-          </div>
-          {avgTime !== null && (
-            <div className="border-l border-zinc-200 pl-8">
-              <p className="text-4xl font-mono font-bold">{formatTime(avgTime)}</p>
-              <p className="text-xs text-zinc-400 uppercase tracking-wider mt-1">Avg Time</p>
+            <div className="flex flex-col gap-2">
+              {percentiles.map(({ time, pct }) => (
+                <div key={pct} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-lg">{formatTime(time)}</span>
+                    <span className="text-zinc-400 text-sm">or faster</span>
+                  </div>
+                  <span
+                    className={`text-sm font-semibold px-2.5 py-0.5 rounded-full ${
+                      pct === 90
+                        ? "bg-amber-100 text-amber-700"
+                        : pct === 75
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-zinc-200 text-zinc-600"
+                    }`}
+                  >
+                    Top {100 - pct}%
+                  </span>
+                </div>
+              ))}
             </div>
-          )}
+            <div className="border-t border-zinc-200 mt-3 pt-3 flex items-center justify-between">
+              <span className="text-sm text-zinc-500">Average time</span>
+              <span className="font-mono font-semibold">{formatTime(avgTime!)}</span>
+            </div>
+          </div>
         </div>
       )}
 
