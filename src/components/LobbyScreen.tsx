@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getTodaysLeaderboard } from "@/lib/db";
+import Testimonials from "./Testimonials";
 
 interface LobbyScreenProps {
   onStart: () => void;
@@ -157,6 +158,9 @@ export default function LobbyScreen({ onStart }: LobbyScreenProps) {
       <p className="text-sm text-zinc-400 max-w-sm">
         Timer starts when you click. 3 puzzles, each slightly harder. How fast can you debug?
       </p>
+
+      {/* Testimonials */}
+      <Testimonials />
     </div>
   );
 }

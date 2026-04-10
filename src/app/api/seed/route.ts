@@ -7,26 +7,26 @@ if (getApps().length === 0) {
 const db = getFirestore();
 
 const FAKE_PLAYERS = [
-  { name: "Alex Chen", time: 87 },
-  { name: "Jordan Hayes", time: 102 },
-  { name: "Sam Rivera", time: 118 },
-  { name: "Morgan Blake", time: 135 },
-  { name: "Taylor Swift", time: 142 },
-  { name: "Casey Kim", time: 156 },
-  { name: "Riley Patel", time: 168 },
-  { name: "Quinn Murphy", time: 179 },
-  { name: "Avery Brooks", time: 195 },
-  { name: "Jamie Torres", time: 210 },
-  { name: "Drew Wilson", time: 224 },
-  { name: "Skyler Grant", time: 238 },
-  { name: "Reese Cooper", time: 255 },
-  { name: "Dakota Lee", time: 271 },
-  { name: "Finley Ross", time: 290 },
-  { name: "Harper Davis", time: 312 },
-  { name: "Sage Miller", time: 340 },
-  { name: "Emery Clark", time: 365 },
-  { name: "Rowan Nash", time: 398 },
-  { name: "Phoenix Hall", time: 445 },
+  { name: "Elon Musk", time: 87 },
+  { name: "Mark Zuckerberg", time: 102 },
+  { name: "Sam Altman", time: 118 },
+  { name: "Jensen Huang", time: 135 },
+  { name: "Sundar Pichai", time: 142 },
+  { name: "Satya Nadella", time: 156 },
+  { name: "Tim Cook", time: 168 },
+  { name: "Dario Amodei", time: 179 },
+  { name: "Patrick Collison", time: 195 },
+  { name: "Guillermo Rauch", time: 210 },
+  { name: "ThePrimeagen", time: 224 },
+  { name: "Fireship", time: 238 },
+  { name: "George Hotz", time: 255 },
+  { name: "DHH", time: 271 },
+  { name: "Pieter Levels", time: 290 },
+  { name: "Andrej Karpathy", time: 312 },
+  { name: "Lex Fridman", time: 340 },
+  { name: "Gary Vee", time: 365 },
+  { name: "Jake Paul", time: 398 },
+  { name: "Your Mom", time: 445 },
 ];
 
 export async function POST() {
@@ -37,7 +37,6 @@ export async function POST() {
     const uid = `fake_${player.name.replace(/\s/g, "_").toLowerCase()}`;
     const docId = `${uid}_${today}`;
 
-    // Distribute time across 3 puzzles roughly 25/35/40 split
     const easy = Math.round(player.time * 0.25);
     const medium = Math.round(player.time * 0.35);
     const hard = player.time - easy - medium;
