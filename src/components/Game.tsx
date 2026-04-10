@@ -39,12 +39,18 @@ export default function Game({ puzzles }: GameProps) {
   useEffect(() => {
     if (!user) {
       setChecking(false);
+      setAlreadyPlayed(false);
       return;
     }
-    hasPlayedToday(user.uid).then((played) => {
-      setAlreadyPlayed(played);
-      setChecking(false);
-    });
+    hasPlayedToday(user.uid)
+      .then((played) => {
+        setAlreadyPlayed(played);
+        setChecking(false);
+      })
+      .catch(() => {
+        // Firestore permissions not set up yet — let them play
+        setChecking(false);
+      });
   }, [user]);
 
   const puzzle = puzzles[currentStage];
@@ -89,7 +95,7 @@ export default function Game({ puzzles }: GameProps) {
         const total = Math.floor((Date.now() - startTime) / 1000);
         setTotalTime(total);
 
-        // Save to Firestore
+        // Save to Firestore (if signed in)
         if (user) {
           const today = new Date().toISOString().split("T")[0];
           saveGameResult(
@@ -99,7 +105,7 @@ export default function Game({ puzzles }: GameProps) {
             today,
             newResults,
             total
-          );
+          ).catch(() => {});
         }
 
         setTimeout(() => {

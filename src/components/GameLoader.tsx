@@ -10,9 +10,14 @@ export default function GameLoader() {
   const [puzzles, setPuzzles] = useState<Puzzle[] | null>(null);
 
   useEffect(() => {
-    getTodaysPuzzlesFromDB().then((dbPuzzles) => {
-      setPuzzles(dbPuzzles ?? getTodaysPuzzles());
-    });
+    getTodaysPuzzlesFromDB()
+      .then((dbPuzzles) => {
+        setPuzzles(dbPuzzles ?? getTodaysPuzzles());
+      })
+      .catch(() => {
+        // Firestore not accessible — use hardcoded puzzles
+        setPuzzles(getTodaysPuzzles());
+      });
   }, []);
 
   if (!puzzles) {
