@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { ADMIN_EMAIL } from "@/lib/firebase";
-import { getAllPuzzleSets, approvePuzzleSet, PuzzleSet } from "@/lib/db";
+import { getAllPuzzleSets, approvePuzzleSet, savePuzzleSet, PuzzleSet } from "@/lib/db";
 
 function getMonthDays(year: number, month: number) {
   const firstDay = new Date(year, month, 1).getDay();
@@ -77,6 +77,8 @@ export default function AdminPage() {
         const err = await res.text();
         alert(`Generation failed: ${err}`);
       } else {
+        const data = await res.json();
+        await savePuzzleSet(date, data.puzzles, "draft");
         await loadPuzzles();
       }
     } catch (e) {
@@ -106,7 +108,8 @@ export default function AdminPage() {
       });
       const data = await res.json();
 
-      if (data.action === "saved") {
+      if (data.action === "save" && data.puzzles) {
+        await savePuzzleSet(selectedDate, data.puzzles, "draft");
         setChatMessages((prev) => [
           ...prev,
           { role: "assistant", text: "Done! Puzzles saved as draft. Review them above." },

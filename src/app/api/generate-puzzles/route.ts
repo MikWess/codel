@@ -1,12 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { initializeApp, getApps, cert } from "firebase-admin/app";
-import { getFirestore, Timestamp } from "firebase-admin/firestore";
-
-// Initialize Firebase Admin (server-side)
-if (getApps().length === 0) {
-  initializeApp({ projectId: "codel-e2440" });
-}
-const db = getFirestore();
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
@@ -75,14 +67,6 @@ export async function POST(request: Request) {
     return new Response(`Failed to parse Claude response: ${text}`, { status: 500 });
   }
 
-  // Save as draft to Firestore
-  await db.collection("puzzles").doc(date).set({
-    date,
-    status: "draft",
-    puzzles,
-    generatedAt: Timestamp.now(),
-    approvedAt: null,
-  });
-
-  return Response.json({ success: true, date, puzzles });
+  // Return puzzles to client — client saves to Firestore
+  return Response.json({ puzzles });
 }

@@ -1,11 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { initializeApp, getApps } from "firebase-admin/app";
-import { getFirestore, Timestamp } from "firebase-admin/firestore";
-
-if (getApps().length === 0) {
-  initializeApp({ projectId: "codel-e2440" });
-}
-const db = getFirestore();
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
@@ -78,16 +71,9 @@ export async function POST(request: Request) {
     return Response.json({ action: "chat", message: text });
   }
 
-  // If the model returned puzzles, save them as draft
-  if (parsed.action === "save" && parsed.puzzles && date) {
-    await db.collection("puzzles").doc(date).set({
-      date,
-      status: "draft",
-      puzzles: parsed.puzzles,
-      generatedAt: Timestamp.now(),
-      approvedAt: null,
-    });
-    return Response.json({ action: "saved", puzzles: parsed.puzzles });
+  // Return puzzles to client — client handles Firestore save
+  if (parsed.action === "save" && parsed.puzzles) {
+    return Response.json({ action: "save", puzzles: parsed.puzzles });
   }
 
   return Response.json(parsed);
