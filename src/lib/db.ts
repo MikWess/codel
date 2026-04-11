@@ -4,6 +4,7 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -120,12 +121,57 @@ export async function hasPlayedToday(uid: string): Promise<boolean> {
 
 export async function getTodaysLeaderboard(): Promise<GameRecord[]> {
   const today = new Date().toISOString().split("T")[0];
+  return getLeaderboardByDate(today);
+}
+
+export async function getLeaderboardByDate(date: string): Promise<GameRecord[]> {
   const q = query(
     collection(db, "games"),
-    where("date", "==", today),
+    where("date", "==", date),
     orderBy("totalTime", "asc"),
-    limit(20)
+    limit(50)
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data() as GameRecord);
+  return snap.docs.map((d) => ({ ...d.data(), _docId: d.id }) as GameRecord & { _docId: string });
+}
+
+export async function updateGameTime(docId: string, totalTime: number) {
+  const docRef = doc(db, "games", docId);
+  const snap = await getDoc(docRef);
+  if (!snap.exists()) return;
+  const data = snap.data();
+  // Redistribute time across puzzles roughly
+  const easy = Math.round(totalTime * 0.25);
+  const medium = Math.round(totalTime * 0.35);
+  const hard = totalTime - easy - medium;
+  const results = (data.results || []).map((r: Record<string, unknown>, i: number) => ({
+    ...r,
+    timeSeconds: i === 0 ? easy : i === 1 ? medium : hard,
+  }));
+  await setDoc(docRef, { ...data, totalTime, results });
+}
+
+export async function deleteGameEntry(docId: string) {
+  await deleteDoc(doc(db, "games", docId));
+}
+
+export async function addFakePlayer(name: string, totalTime: number, date: string) {
+  const uid = `fake_${name.replace(/\s/g, "_").toLowerCase()}_${Date.now()}`;
+  const docId = `${uid}_${date}`;
+  const easy = Math.round(totalTime * 0.25);
+  const medium = Math.round(totalTime * 0.35);
+  const hard = totalTime - easy - medium;
+  await setDoc(doc(db, "games", docId), {
+    uid,
+    displayName: name,
+    photoURL: "",
+    date,
+    results: [
+      { puzzleId: "easy-001", difficulty: "easy", timeSeconds: easy, solved: true },
+      { puzzleId: "medium-001", difficulty: "medium", timeSeconds: medium, solved: true },
+      { puzzleId: "hard-001", difficulty: "hard", timeSeconds: hard, solved: true },
+    ],
+    totalTime,
+    completedAt: Timestamp.now(),
+  });
 }

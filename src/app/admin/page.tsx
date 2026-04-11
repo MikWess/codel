@@ -3,7 +3,11 @@
 import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { ADMIN_EMAIL } from "@/lib/firebase";
-import { getAllPuzzleSets, approvePuzzleSet, savePuzzleSet, PuzzleSet } from "@/lib/db";
+import {
+  getAllPuzzleSets, approvePuzzleSet, savePuzzleSet, PuzzleSet,
+  getLeaderboardByDate, updateGameTime, deleteGameEntry, addFakePlayer,
+  GameRecord,
+} from "@/lib/db";
 
 function getMonthDays(year: number, month: number) {
   const firstDay = new Date(year, month, 1).getDay();
@@ -29,6 +33,15 @@ export default function AdminPage() {
   const [chatInput, setChatInput] = useState("");
   const [chatMessages, setChatMessages] = useState<{ role: string; text: string }[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
+
+  // Leaderboard state
+  const [lbDate, setLbDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [lbEntries, setLbEntries] = useState<(GameRecord & { _docId: string })[]>([]);
+  const [lbLoading, setLbLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTime, setEditTime] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newTime, setNewTime] = useState("");
 
   const now = new Date();
   const [viewYear, setViewYear] = useState(now.getFullYear());
@@ -90,6 +103,37 @@ export default function AdminPage() {
   async function handleApprove(date: string) {
     await approvePuzzleSet(date);
     await loadPuzzles();
+  }
+
+  async function loadLeaderboard() {
+    setLbLoading(true);
+    const entries = await getLeaderboardByDate(lbDate) as (GameRecord & { _docId: string })[];
+    setLbEntries(entries);
+    setLbLoading(false);
+  }
+
+  async function handleUpdateTime(docId: string) {
+    const seconds = parseInt(editTime);
+    if (isNaN(seconds) || seconds < 0) return;
+    await updateGameTime(docId, seconds);
+    setEditingId(null);
+    setEditTime("");
+    await loadLeaderboard();
+  }
+
+  async function handleDeleteEntry(docId: string) {
+    await deleteGameEntry(docId);
+    await loadLeaderboard();
+  }
+
+  async function handleAddPlayer() {
+    if (!newName.trim() || !newTime.trim()) return;
+    const seconds = parseInt(newTime);
+    if (isNaN(seconds) || seconds < 0) return;
+    await addFakePlayer(newName.trim(), seconds, lbDate);
+    setNewName("");
+    setNewTime("");
+    await loadLeaderboard();
   }
 
   async function handleChat() {
@@ -384,6 +428,117 @@ export default function AdminPage() {
             </>
           )}
         </div>
+      </div>
+      {/* Leaderboard Manager */}
+      <div className="border-t border-zinc-200 mt-8 pt-8">
+        <h3 className="text-xl font-bold mb-4">Leaderboard Manager</h3>
+
+        <div className="flex gap-3 items-end mb-4">
+          <div>
+            <label className="text-sm text-zinc-500 block mb-1">Date</label>
+            <input
+              type="date"
+              value={lbDate}
+              onChange={(e) => setLbDate(e.target.value)}
+              className="border border-zinc-300 rounded-md px-3 py-2 text-sm"
+            />
+          </div>
+          <button
+            onClick={loadLeaderboard}
+            disabled={lbLoading}
+            className="px-4 py-2 bg-zinc-900 text-white rounded-md hover:bg-zinc-700 text-sm font-semibold"
+          >
+            {lbLoading ? "Loading..." : "Load"}
+          </button>
+        </div>
+
+        {/* Add new player */}
+        <div className="flex gap-2 mb-4">
+          <input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Name"
+            className="border border-zinc-300 rounded-md px-3 py-2 text-sm w-48"
+          />
+          <input
+            value={newTime}
+            onChange={(e) => setNewTime(e.target.value)}
+            placeholder="Time (seconds)"
+            className="border border-zinc-300 rounded-md px-3 py-2 text-sm w-32"
+          />
+          <button
+            onClick={handleAddPlayer}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-500 text-sm font-semibold"
+          >
+            Add Player
+          </button>
+        </div>
+
+        {/* Entries */}
+        {lbEntries.length > 0 && (
+          <div className="flex flex-col gap-1">
+            {lbEntries.map((entry, i) => {
+              const mins = Math.floor(entry.totalTime / 60);
+              const secs = entry.totalTime % 60;
+              const isEditing = editingId === entry._docId;
+              return (
+                <div
+                  key={entry._docId}
+                  className="flex items-center gap-3 px-3 py-2 border border-zinc-100 rounded-md text-sm hover:bg-zinc-50"
+                >
+                  <span className="text-zinc-400 w-6 text-right font-mono">{i + 1}</span>
+                  <span className="flex-1 font-medium">{entry.displayName}</span>
+                  {isEditing ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        value={editTime}
+                        onChange={(e) => setEditTime(e.target.value)}
+                        className="border border-zinc-300 rounded px-2 py-1 text-xs w-20 font-mono"
+                        placeholder="seconds"
+                        autoFocus
+                        onKeyDown={(e) => e.key === "Enter" && handleUpdateTime(entry._docId)}
+                      />
+                      <button
+                        onClick={() => handleUpdateTime(entry._docId)}
+                        className="text-xs text-emerald-600 font-semibold hover:text-emerald-800"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="text-xs text-zinc-400 hover:text-zinc-600"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="font-mono text-zinc-600">
+                        {mins}:{String(secs).padStart(2, "0")}
+                      </span>
+                      <span className="text-xs text-zinc-400">({entry.totalTime}s)</span>
+                      <button
+                        onClick={() => {
+                          setEditingId(entry._docId);
+                          setEditTime(String(entry.totalTime));
+                        }}
+                        className="text-xs text-blue-500 hover:text-blue-700"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteEntry(entry._docId)}
+                        className="text-xs text-red-400 hover:text-red-600"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </main>
   );

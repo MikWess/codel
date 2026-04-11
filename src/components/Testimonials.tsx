@@ -3,166 +3,166 @@
 const TESTIMONIALS = [
   {
     name: "Elon Musk",
-    title: "CEO, Tesla & SpaceX",
+    handle: "@elonmusk",
     initials: "EM",
-    color: "from-blue-50 to-cyan-50 border-blue-100",
-    initialsColor: "bg-blue-600",
+    color: "bg-blue-600",
     quote: "Mikey builds faster than Starship iterates. Hire him.",
   },
   {
     name: "Mark Zuckerberg",
-    title: "CEO, Meta",
+    handle: "@faborig",
     initials: "MZ",
-    color: "from-indigo-50 to-blue-50 border-indigo-100",
-    initialsColor: "bg-indigo-600",
+    color: "bg-indigo-600",
     quote: "I got stuck on a for loop. Mikey shipped this whole game in an afternoon.",
   },
   {
     name: "Sam Altman",
-    title: "CEO, OpenAI",
+    handle: "@sama",
     initials: "SA",
-    color: "from-emerald-50 to-teal-50 border-emerald-100",
-    initialsColor: "bg-emerald-600",
+    color: "bg-emerald-600",
     quote: "GPT hallucinated the wrong fix. Mikey IS the real AGI.",
   },
   {
     name: "Jensen Huang",
-    title: "CEO, NVIDIA",
+    handle: "@nvidia",
     initials: "JH",
-    color: "from-lime-50 to-green-50 border-lime-100",
-    initialsColor: "bg-green-700",
+    color: "bg-green-700",
     quote: "My leather jacket couldn't save me on puzzle 3. Mikey builds at CUDA speed.",
   },
   {
     name: "Satya Nadella",
-    title: "CEO, Microsoft",
+    handle: "@satloyal",
     initials: "SN",
-    color: "from-sky-50 to-blue-50 border-sky-100",
-    initialsColor: "bg-sky-600",
+    color: "bg-sky-600",
     quote: "This game has more DAUs than Bing. Have Mikey look at your stack.",
   },
   {
     name: "Tim Cook",
-    title: "CEO, Apple",
+    handle: "@tim_cook",
     initials: "TC",
-    color: "from-zinc-50 to-slate-50 border-zinc-200",
-    initialsColor: "bg-zinc-700",
+    color: "bg-zinc-700",
     quote: "Better debugging experience than Xcode. Infinitely better.",
   },
   {
     name: "Guillermo Rauch",
-    title: "CEO, Vercel",
+    handle: "@raaborig",
     initials: "GR",
-    color: "from-violet-50 to-purple-50 border-violet-100",
-    initialsColor: "bg-violet-600",
+    color: "bg-violet-600",
     quote: "Builds like a 10-year vet. Learns like day one. That's rare.",
   },
   {
     name: "ThePrimeagen",
-    title: "Content Creator",
+    handle: "@ThePrimeagen",
     initials: "TP",
-    color: "from-orange-50 to-amber-50 border-orange-100",
-    initialsColor: "bg-orange-600",
+    color: "bg-orange-600",
     quote: "Tried to solve it in Vim. Rage-quit. Mikey just ships.",
   },
   {
     name: "George Hotz",
-    title: "Founder, comma.ai",
+    handle: "@realGeorgeHotz",
     initials: "GH",
-    color: "from-red-50 to-rose-50 border-red-100",
-    initialsColor: "bg-red-600",
+    color: "bg-red-600",
     quote: "Hacked the iPhone at 17. Couldn't find the off-by-one in 90 seconds.",
   },
   {
     name: "Andrej Karpathy",
-    title: "AI Researcher",
+    handle: "@karpathy",
     initials: "AK",
-    color: "from-fuchsia-50 to-pink-50 border-fuchsia-100",
-    initialsColor: "bg-fuchsia-600",
+    color: "bg-fuchsia-600",
     quote: "Curiosity meets execution. Let Mikey into your codebase.",
   },
   {
     name: "Pieter Levels",
-    title: "Indie Hacker",
+    handle: "@levelsio",
     initials: "PL",
-    color: "from-cyan-50 to-teal-50 border-cyan-100",
-    initialsColor: "bg-cyan-600",
+    color: "bg-cyan-600",
     quote: "70+ projects. Mikey's is cleaner than half of them. Go follow him.",
   },
   {
     name: "Patrick Collison",
-    title: "CEO, Stripe",
+    handle: "@patrickc",
     initials: "PC",
-    color: "from-purple-50 to-indigo-50 border-purple-100",
-    initialsColor: "bg-purple-600",
+    color: "bg-purple-600",
     quote: "Fast is a feature. Mikey Wessman IS fast.",
   },
   {
     name: "Lex Fridman",
-    title: "Podcaster",
+    handle: "@lexfridman",
     initials: "LF",
-    color: "from-slate-50 to-zinc-50 border-slate-200",
-    initialsColor: "bg-slate-700",
+    color: "bg-slate-700",
     quote: "I contemplated the bug for 4 hours. Mikey? 47 seconds. Love.",
   },
   {
     name: "Gary Vee",
-    title: "CEO, VaynerMedia",
+    handle: "@garyvee",
     initials: "GV",
-    color: "from-yellow-50 to-amber-50 border-yellow-100",
-    initialsColor: "bg-yellow-600",
+    color: "bg-yellow-600",
     quote: "This kid is putting in the REPS. Go DM him. NOW.",
   },
   {
     name: "DHH",
-    title: "Creator, Rails",
+    handle: "@dhh",
     initials: "DH",
-    color: "from-rose-50 to-red-50 border-rose-100",
-    initialsColor: "bg-rose-600",
+    color: "bg-rose-600",
     quote: "One dev. No team. No billion dollars. Just Mikey and a keyboard.",
   },
   {
     name: "Fireship",
-    title: "YouTube",
+    handle: "@fireship_dev",
     initials: "FS",
-    color: "from-amber-50 to-orange-50 border-amber-100",
-    initialsColor: "bg-amber-600",
+    color: "bg-amber-600",
     quote: "Built this in 100 seconds. Okay fine, a bit more. But not much.",
   },
 ];
+
+function XLogo() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-zinc-300">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
 
 export default function Testimonials() {
   const doubled = [...TESTIMONIALS, ...TESTIMONIALS];
 
   return (
     <div className="w-full overflow-hidden pt-16 pb-2">
-      <p className="text-center text-xs text-zinc-400 uppercase tracking-widest font-semibold mb-5">
+      <p className="text-center text-xs text-zinc-400 uppercase tracking-widest font-semibold mb-6">
         What the internet is saying
       </p>
       <div className="relative">
-        <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+        <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
 
         <div className="flex gap-4 animate-scroll">
           {doubled.map((t, i) => (
             <div
               key={i}
-              className={`flex-shrink-0 w-72 rounded-xl p-4 border bg-gradient-to-br ${t.color}`}
+              className="flex-shrink-0 w-72 rounded-xl p-4 bg-white border border-zinc-200 hover:border-zinc-300 transition-colors"
             >
-              <p className="text-sm text-zinc-600 leading-snug mb-3">
-                &ldquo;{t.quote}&rdquo;
-              </p>
-              <div className="flex items-center gap-2.5">
-                <div
-                  className={`w-8 h-8 rounded-full ${t.initialsColor} flex items-center justify-center text-white text-xs font-bold`}
-                >
-                  {t.initials}
+              {/* Header row — avatar, name, handle, X logo */}
+              <div className="flex items-start justify-between mb-2.5">
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className={`w-9 h-9 rounded-full ${t.color} flex items-center justify-center text-white text-xs font-bold shrink-0`}
+                  >
+                    {t.initials}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-zinc-900 leading-tight truncate">
+                      {t.name}
+                    </p>
+                    <p className="text-xs text-zinc-400 leading-tight">{t.handle}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-zinc-800">{t.name}</p>
-                  <p className="text-xs text-zinc-400">{t.title}</p>
-                </div>
+                <XLogo />
               </div>
+
+              {/* Tweet body */}
+              <p className="text-[13px] text-zinc-700 leading-snug">
+                {t.quote}
+              </p>
             </div>
           ))}
         </div>
