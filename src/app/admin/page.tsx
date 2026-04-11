@@ -43,6 +43,10 @@ export default function AdminPage() {
   const [newName, setNewName] = useState("");
   const [newTime, setNewTime] = useState("");
 
+  // Puzzle editor state
+  const [editorPuzzles, setEditorPuzzles] = useState<Record<string, unknown>[] | null>(null);
+  const [editorDate, setEditorDate] = useState<string | null>(null);
+
   const now = new Date();
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [viewMonth, setViewMonth] = useState(now.getMonth());
@@ -91,13 +95,39 @@ export default function AdminPage() {
         alert(`Generation failed: ${err}`);
       } else {
         const data = await res.json();
-        await savePuzzleSet(date, data.puzzles, "draft");
-        await loadPuzzles();
+        if (data.parseError) {
+          alert(`Claude returned unparseable response. Raw text:\n\n${data.raw}`);
+        } else {
+          // Open in editor instead of saving directly
+          setEditorPuzzles(data.puzzles);
+          setEditorDate(date);
+        }
       }
     } catch (e) {
       alert(`Error: ${e}`);
     }
     setGenerating(false);
+  }
+
+  function updateEditorPuzzle(index: number, field: string, value: string) {
+    if (!editorPuzzles) return;
+    const updated = [...editorPuzzles];
+    updated[index] = { ...updated[index], [field]: field === "timeTarget" ? parseInt(value) || 0 : value };
+    setEditorPuzzles(updated);
+  }
+
+  async function handleSaveEditor() {
+    if (!editorPuzzles || !editorDate) return;
+    await savePuzzleSet(editorDate, editorPuzzles as never, "draft");
+    setEditorPuzzles(null);
+    setEditorDate(null);
+    await loadPuzzles();
+  }
+
+  function handleEditExisting() {
+    if (!selectedSet || !selectedDate) return;
+    setEditorPuzzles(selectedSet.puzzles as unknown as Record<string, unknown>[]);
+    setEditorDate(selectedDate);
   }
 
   async function handleApprove(date: string) {
@@ -302,8 +332,95 @@ export default function AdminPage() {
         </div>
 
         {/* Detail panel */}
-        <div className="w-96 shrink-0 flex flex-col gap-4">
-          {!selectedDate ? (
+        <div className="w-[480px] shrink-0 flex flex-col gap-4">
+          {/* Puzzle Editor */}
+          {editorPuzzles && editorDate ? (
+            <div className="border border-blue-200 rounded-lg p-4 bg-blue-50/30">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-lg">Editing — {editorDate}</h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveEditor}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-500 text-sm font-semibold"
+                  >
+                    Save as Draft
+                  </button>
+                  <button
+                    onClick={() => { setEditorPuzzles(null); setEditorDate(null); }}
+                    className="px-4 py-2 border border-zinc-300 text-zinc-600 rounded-md hover:bg-zinc-100 text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+              {editorPuzzles.map((p, i) => (
+                <div key={i} className="mb-5 last:mb-0 border border-zinc-200 rounded-lg p-3 bg-white">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`text-xs font-bold uppercase ${
+                      (p.difficulty as string) === "easy" ? "text-green-600"
+                        : (p.difficulty as string) === "medium" ? "text-amber-600"
+                        : "text-red-600"
+                    }`}>
+                      {p.difficulty as string}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-2 text-sm">
+                    <div>
+                      <label className="text-xs text-zinc-400 block mb-0.5">Title</label>
+                      <input
+                        value={(p.title as string) || ""}
+                        onChange={(e) => updateEditorPuzzle(i, "title", e.target.value)}
+                        className="w-full border border-zinc-300 rounded px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-zinc-400 block mb-0.5">Description</label>
+                      <input
+                        value={(p.description as string) || ""}
+                        onChange={(e) => updateEditorPuzzle(i, "description", e.target.value)}
+                        className="w-full border border-zinc-300 rounded px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-zinc-400 block mb-0.5">Buggy Code</label>
+                      <textarea
+                        value={(p.buggyCode as string) || ""}
+                        onChange={(e) => updateEditorPuzzle(i, "buggyCode", e.target.value)}
+                        rows={6}
+                        className="w-full border border-zinc-300 rounded px-2 py-1.5 text-xs font-mono resize-y"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-xs text-zinc-400 block mb-0.5">Expected Output</label>
+                        <input
+                          value={(p.expectedOutput as string) || ""}
+                          onChange={(e) => updateEditorPuzzle(i, "expectedOutput", e.target.value)}
+                          className="w-full border border-zinc-300 rounded px-2 py-1.5 text-sm font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-zinc-400 block mb-0.5">Time Target (s)</label>
+                        <input
+                          value={String((p.timeTarget as number) || "")}
+                          onChange={(e) => updateEditorPuzzle(i, "timeTarget", e.target.value)}
+                          className="w-full border border-zinc-300 rounded px-2 py-1.5 text-sm font-mono"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-zinc-400 block mb-0.5">Hint</label>
+                      <input
+                        value={(p.hint as string) || ""}
+                        onChange={(e) => updateEditorPuzzle(i, "hint", e.target.value)}
+                        className="w-full border border-zinc-300 rounded px-2 py-1.5 text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : !selectedDate ? (
             <div className="border border-zinc-200 border-dashed rounded-lg p-8 text-center text-zinc-400">
               <p>Select a date to view or generate puzzles</p>
             </div>
@@ -326,14 +443,22 @@ export default function AdminPage() {
                         {selectedSet.status}
                       </span>
                     </div>
-                    {selectedSet.status === "draft" && (
+                    <div className="flex gap-2">
                       <button
-                        onClick={() => handleApprove(selectedDate)}
-                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-500 transition-colors text-sm font-semibold"
+                        onClick={handleEditExisting}
+                        className="px-3 py-1.5 border border-zinc-300 text-zinc-600 rounded-md hover:bg-zinc-100 text-sm"
                       >
-                        Approve
+                        Edit
                       </button>
-                    )}
+                      {selectedSet.status === "draft" && (
+                        <button
+                          onClick={() => handleApprove(selectedDate)}
+                          className="px-4 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-500 transition-colors text-sm font-semibold"
+                        >
+                          Approve
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-col gap-3">
                     {selectedSet.puzzles.map((p) => (

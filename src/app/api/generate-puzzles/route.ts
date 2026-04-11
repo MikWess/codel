@@ -18,7 +18,7 @@ Rules:
 - Use common programming concepts: loops, arrays, strings, objects, functions
 - Never reuse the same bug pattern across the 3 puzzles
 
-Respond with ONLY valid JSON in this exact format:
+Respond with ONLY a raw JSON array. No markdown, no code fences, no explanation. Just the JSON:
 [
   {
     "id": "easy-YYYYMMDD",
@@ -30,8 +30,8 @@ Respond with ONLY valid JSON in this exact format:
     "hint": "A helpful hint without giving away the answer",
     "timeTarget": 60
   },
-  { same for medium with timeTarget 90 },
-  { same for hard with timeTarget 90 }
+  { "id": "medium-YYYYMMDD", "difficulty": "medium", ... "timeTarget": 90 },
+  { "id": "hard-YYYYMMDD", "difficulty": "hard", ... "timeTarget": 90 }
 ]`;
 
 export async function POST(request: Request) {
@@ -58,15 +58,18 @@ export async function POST(request: Request) {
     system: SYSTEM_PROMPT,
   });
 
-  const text = message.content[0].type === "text" ? message.content[0].text : "";
+  let text = message.content[0].type === "text" ? message.content[0].text : "";
+
+  // Strip markdown code fences if present
+  text = text.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
 
   let puzzles;
   try {
     puzzles = JSON.parse(text);
   } catch {
-    return new Response(`Failed to parse Claude response: ${text}`, { status: 500 });
+    // Return raw text so the client can show it for manual fixing
+    return Response.json({ raw: text, parseError: true });
   }
 
-  // Return puzzles to client — client saves to Firestore
   return Response.json({ puzzles });
 }
