@@ -11,7 +11,7 @@ import {
   limit,
   Timestamp,
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { getDatabase } from "./firebase";
 import { Puzzle, PuzzleResult } from "./types";
 
 // ── Puzzles ──
@@ -26,7 +26,7 @@ export interface PuzzleSet {
 
 export async function getTodaysPuzzlesFromDB(): Promise<Puzzle[] | null> {
   const today = new Date().toISOString().split("T")[0];
-  const docRef = doc(db, "puzzles", today);
+  const docRef = doc(getDatabase(), "puzzles", today);
   const snap = await getDoc(docRef);
   if (!snap.exists()) return null;
   const data = snap.data() as PuzzleSet;
@@ -39,7 +39,7 @@ export async function savePuzzleSet(
   puzzles: Puzzle[],
   status: "draft" | "approved" = "draft"
 ) {
-  await setDoc(doc(db, "puzzles", date), {
+  await setDoc(doc(getDatabase(), "puzzles", date), {
     date,
     status,
     puzzles,
@@ -49,20 +49,20 @@ export async function savePuzzleSet(
 }
 
 export async function approvePuzzleSet(date: string) {
-  const docRef = doc(db, "puzzles", date);
+  const docRef = doc(getDatabase(), "puzzles", date);
   const snap = await getDoc(docRef);
   if (!snap.exists()) return;
   await setDoc(docRef, { ...snap.data(), status: "approved", approvedAt: Timestamp.now() });
 }
 
 export async function getDraftPuzzles(): Promise<PuzzleSet[]> {
-  const q = query(collection(db, "puzzles"), where("status", "==", "draft"));
+  const q = query(collection(getDatabase(), "puzzles"), where("status", "==", "draft"));
   const snap = await getDocs(q);
   return snap.docs.map((d) => d.data() as PuzzleSet);
 }
 
 export async function getAllPuzzleSets(): Promise<PuzzleSet[]> {
-  const q = query(collection(db, "puzzles"), orderBy("date", "desc"), limit(30));
+  const q = query(collection(getDatabase(), "puzzles"), orderBy("date", "desc"), limit(30));
   const snap = await getDocs(q);
   return snap.docs.map((d) => d.data() as PuzzleSet);
 }
@@ -88,7 +88,7 @@ export async function saveGameResult(
   totalTime: number
 ) {
   const docId = `${uid}_${date}`;
-  await setDoc(doc(db, "games", docId), {
+  await setDoc(doc(getDatabase(), "games", docId), {
     uid,
     displayName,
     photoURL,
@@ -101,7 +101,7 @@ export async function saveGameResult(
 
 export async function getUserGames(uid: string): Promise<GameRecord[]> {
   const q = query(
-    collection(db, "games"),
+    collection(getDatabase(), "games"),
     where("uid", "==", uid),
     orderBy("date", "desc"),
     limit(30)
@@ -112,7 +112,7 @@ export async function getUserGames(uid: string): Promise<GameRecord[]> {
 
 export async function hasPlayedToday(uid: string): Promise<boolean> {
   const today = new Date().toISOString().split("T")[0];
-  const docRef = doc(db, "games", `${uid}_${today}`);
+  const docRef = doc(getDatabase(), "games", `${uid}_${today}`);
   const snap = await getDoc(docRef);
   return snap.exists();
 }
@@ -126,7 +126,7 @@ export async function getTodaysLeaderboard(): Promise<GameRecord[]> {
 
 export async function getLeaderboardByDate(date: string): Promise<GameRecord[]> {
   const q = query(
-    collection(db, "games"),
+    collection(getDatabase(), "games"),
     where("date", "==", date),
     orderBy("totalTime", "asc"),
     limit(50)
@@ -136,7 +136,7 @@ export async function getLeaderboardByDate(date: string): Promise<GameRecord[]> 
 }
 
 export async function updateGameTime(docId: string, totalTime: number) {
-  const docRef = doc(db, "games", docId);
+  const docRef = doc(getDatabase(), "games", docId);
   const snap = await getDoc(docRef);
   if (!snap.exists()) return;
   const data = snap.data();
@@ -152,7 +152,7 @@ export async function updateGameTime(docId: string, totalTime: number) {
 }
 
 export async function deleteGameEntry(docId: string) {
-  await deleteDoc(doc(db, "games", docId));
+  await deleteDoc(doc(getDatabase(), "games", docId));
 }
 
 export async function addFakePlayer(name: string, totalTime: number, date: string) {
@@ -161,7 +161,7 @@ export async function addFakePlayer(name: string, totalTime: number, date: strin
   const easy = Math.round(totalTime * 0.25);
   const medium = Math.round(totalTime * 0.35);
   const hard = totalTime - easy - medium;
-  await setDoc(doc(db, "games", docId), {
+  await setDoc(doc(getDatabase(), "games", docId), {
     uid,
     displayName: name,
     photoURL: "",

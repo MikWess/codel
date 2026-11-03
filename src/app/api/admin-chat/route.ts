@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/admin-auth";
 import Anthropic from "@anthropic-ai/sdk";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
@@ -39,11 +40,18 @@ Rules for puzzles:
 - Keep it fun, not frustrating`;
 
 export async function POST(request: Request) {
+  const rejection = await requireAdmin(request);
+  if (rejection) return rejection;
   if (!ANTHROPIC_API_KEY) {
     return new Response("ANTHROPIC_API_KEY not configured", { status: 500 });
   }
 
-  const { prompt, date, currentPuzzles } = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body.prompt !== "string" || !body.prompt.trim() ||
+      (body.date !== undefined && (typeof body.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(body.date)))) {
+    return new Response("Provide a prompt and an optional YYYY-MM-DD date", { status: 400 });
+  }
+  const { prompt, date, currentPuzzles } = body;
 
   const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 

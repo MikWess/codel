@@ -22,9 +22,9 @@ export default function LobbyScreen({ onStart }: LobbyScreenProps) {
     day: "numeric",
   });
 
-  const puzzleNumber = Math.floor(
+  const [puzzleNumber] = useState(() => Math.floor(
     (Date.now() - new Date("2026-04-10").getTime()) / (1000 * 60 * 60 * 24)
-  ) + 1;
+  ) + 1);
 
   useEffect(() => {
     getTodaysLeaderboard()

@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/admin-auth";
 import Anthropic from "@anthropic-ai/sdk";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
@@ -35,12 +36,15 @@ Respond with ONLY a raw JSON array. No markdown, no code fences, no explanation.
 ]`;
 
 export async function POST(request: Request) {
+  const rejection = await requireAdmin(request);
+  if (rejection) return rejection;
   if (!ANTHROPIC_API_KEY) {
     return new Response("ANTHROPIC_API_KEY not configured", { status: 500 });
   }
 
-  const { date } = await request.json();
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  const body = await request.json().catch(() => null);
+  const date = body?.date;
+  if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return new Response("Invalid date format", { status: 400 });
   }
 
