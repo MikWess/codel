@@ -35,23 +35,17 @@ export default function Game({ puzzles }: GameProps) {
   const [results, setResults] = useState<PuzzleResult[]>([]);
   const [finished, setFinished] = useState(false);
   const [totalTime, setTotalTime] = useState(0);
-  const [alreadyPlayed, setAlreadyPlayed] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const [playedCheck, setPlayedCheck] = useState<{ uid: string; played: boolean } | null>(null);
+  const checking = Boolean(user && playedCheck?.uid !== user.uid);
+  const alreadyPlayed = Boolean(user && playedCheck?.uid === user.uid && playedCheck.played);
 
   useEffect(() => {
-    if (!user) {
-      setChecking(false);
-      setAlreadyPlayed(false);
-      return;
-    }
+    if (!user) return;
+    let cancelled = false;
     hasPlayedToday(user.uid)
-      .then((played) => {
-        setAlreadyPlayed(played);
-        setChecking(false);
-      })
-      .catch(() => {
-        setChecking(false);
-      });
+      .then(played => { if (!cancelled) setPlayedCheck({ uid: user.uid, played }); })
+      .catch(() => { if (!cancelled) setPlayedCheck({ uid: user.uid, played: false }); });
+    return () => { cancelled = true; };
   }, [user]);
 
   const puzzle = puzzles[currentStage];

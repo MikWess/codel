@@ -51,7 +51,7 @@ export default function AdminPage() {
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [viewMonth, setViewMonth] = useState(now.getMonth());
 
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  const isAdmin = Boolean(ADMIN_EMAIL) && user?.email?.toLowerCase() === ADMIN_EMAIL;
 
   const puzzleMap = useMemo(() => {
     const map: Record<string, PuzzleSet> = {};
@@ -68,11 +68,12 @@ export default function AdminPage() {
   const selectedSet = selectedDate ? puzzleMap[selectedDate] : null;
 
   useEffect(() => {
-    if (authLoading || !isAdmin) {
-      setLoading(false);
-      return;
-    }
-    loadPuzzles();
+    if (authLoading || !isAdmin) return;
+    let cancelled = false;
+    getAllPuzzleSets().then(sets => {
+      if (!cancelled) { setPuzzleSets(sets); setLoading(false); }
+    }).catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [isAdmin, authLoading]);
 
   async function loadPuzzles() {
@@ -87,7 +88,7 @@ export default function AdminPage() {
     try {
       const res = await fetch("/api/generate-puzzles", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${await user?.getIdToken()}` },
         body: JSON.stringify({ date }),
       });
       if (!res.ok) {
@@ -177,7 +178,7 @@ export default function AdminPage() {
       const currentPuzzles = puzzleMap[selectedDate]?.puzzles ?? null;
       const res = await fetch("/api/admin-chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${await user?.getIdToken()}` },
         body: JSON.stringify({ prompt: userMsg, date: selectedDate, currentPuzzles }),
       });
       const data = await res.json();

@@ -117,9 +117,9 @@ export default function ResultsScreen({ results, totalTime }: ResultsScreenProps
   const seconds = totalTime % 60;
   const allSolved = results.every((r) => r.solved);
 
-  const puzzleNumber = Math.floor(
+  const [puzzleNumber] = useState(() => Math.floor(
     (Date.now() - new Date("2026-04-10").getTime()) / (1000 * 60 * 60 * 24)
-  ) + 1;
+  ) + 1);
 
   useEffect(() => {
     getTodaysLeaderboard()

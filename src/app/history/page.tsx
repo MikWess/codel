@@ -17,14 +17,12 @@ export default function HistoryPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+    if (!user) return;
+    let cancelled = false;
     getUserGames(user.uid).then((data) => {
-      setGames(data);
-      setLoading(false);
-    });
+      if (!cancelled) { setGames(data); setLoading(false); }
+    }).catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [user, authLoading]);
 
   if (!authLoading && !user) {
@@ -42,7 +40,7 @@ export default function HistoryPage() {
       {loading ? (
         <p className="text-zinc-400">Loading...</p>
       ) : games.length === 0 ? (
-        <p className="text-zinc-400">No games played yet. Go play today's puzzle!</p>
+        <p className="text-zinc-400">No games played yet. Go play today&apos;s puzzle!</p>
       ) : (
         <div className="flex flex-col gap-2">
           {games.map((game) => (

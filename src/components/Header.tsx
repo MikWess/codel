@@ -6,7 +6,7 @@ import { ADMIN_EMAIL } from "@/lib/firebase";
 
 export default function Header() {
   const { user, signIn, logOut } = useAuth();
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  const isAdmin = Boolean(ADMIN_EMAIL) && user?.email?.toLowerCase() === ADMIN_EMAIL;
 
   return (
     <header className="border-b border-zinc-200">
